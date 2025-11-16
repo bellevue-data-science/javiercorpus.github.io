@@ -1,0 +1,381 @@
+---
+title: "Introduction to Machine Learning"
+author: "Javier Corpus"
+date: "`r Sys.Date()`"
+output:
+  word_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Introduction to Machine Learning
+
+---
+
+In this problem, you will use the nearest neighbors algorithm to fit a model on two simplified datasets. The first dataset (`binary-classifier-data.csv`) contains three variables; `label`, `x`, and `y`. The label variable is either 0 or 1 and is the output we want to predict using the x and y variables. The second dataset (`trinary-classifier-data.csv`) is similar to the first dataset except that the label variable can be 0, 1, or 2.
+\
+
+Loading the required libraries.\
+```{r}
+library(ggplot2) # For all the plots
+library(caret) # For function createDataPartition
+library(class, warn.conflicts = FALSE) # For function knn
+```
+
+\
+Loading the required datasets.\
+```{r}
+df_binary <- read.csv("binary-classifier-data.csv")
+df_trinary <- read.csv("trinary-classifier-data.csv")
+```
+
+\
+Plot the data from each dataset using a scatter plot.\
+
+## Scatter plot of the Binary dataset
+```{r}
+ggplot(df_binary, aes(x = x, y = y, color = as.factor(label))) +
+  geom_point(size = 2, alpha = 0.7) +
+  scale_color_manual(values = c("0" = "ivory4", "1" = "darkorange1")) +
+  labs(title = "Scatter Plot of Binary Classifier Data",
+       x = "X",
+       y = "Y",
+       color = "Label") +
+  theme_minimal() + 
+  theme(
+    plot.title = element_text(size = 15, hjust = 0.5)
+  )
+```
+
+## Scatter plot of the Trinary dataset
+```{r}
+ggplot(df_trinary, aes(x = x, y = y, color = as.factor(label))) +
+  geom_point(size = 2, alpha = 0.7) +
+  scale_color_manual(values = c("0" = "ivory4", "1" = "darkorange1", "2" = "deepskyblue")) +
+  labs(title = "Scatter Plot of Trinary Classifier Data",
+       x = "X",
+       y = "Y",
+       color = "Label") +
+  theme_minimal() + 
+  theme(
+    plot.title = element_text(size = 15, hjust = 0.5)
+  )
+```
+
+In this problem, you will determine which points are nearest by calculating the Euclidean distance between two points.\
+```{r}
+# This function calculates the Euclidean distance between two points:
+Euclidean_Distance <- function(x1, y1, x2, y2) {
+  sqrt((x2 - x1)^2 + (y2 - y1)^2)
+}
+```
+
+Looping through the binary dataset.\
+```{r}
+# Variables to store the minimum distance and the corresponding points.
+# "Inf" stands for "Infinite"
+min_distance <- Inf
+point1 <- NULL
+point2 <- NULL
+
+# Looping through the dataset to calculate
+# the Euclidean distance between each pair of points.
+for (i in 1:(nrow(df_binary) - 1)) {
+  for (j in (i + 1):nrow(df_binary)) {
+    distance <- Euclidean_Distance(df_binary$x[i], df_binary$y[i], 
+                                   df_binary$x[j], df_binary$y[j])
+    
+    if (distance < min_distance) {
+      # Storing the value of the minimum distance so far.
+      min_distance <- distance
+      # Storing points 1 and 2 with the minimum distance so far.
+      point1 <- df_binary[i, ]
+      point2 <- df_binary[j, ]
+    }
+  }
+}
+
+# Print the points with the minimum distance,
+# as well as the distance.
+
+cat("The nearest points are:\n")
+cat("X1:",point1$x, "Y1:", point1$y, "and \n")
+cat("X2:",point2$x, "Y2:", point2$y, "\n")
+cat("The Euclidean distance between them is:", min_distance, "\n")
+```
+
+
+Looping through the trinary dataset.\
+```{r}
+
+# Resetting the variables.
+min_distance <- Inf
+point1 <- NULL
+point2 <- NULL
+
+# Looping through the dataset to calculate
+# the Euclidean distance between each pair of points.
+for (i in 1:(nrow(df_trinary) - 1)) {
+  for (j in (i + 1):nrow(df_trinary)) {
+    distance <- Euclidean_Distance(df_trinary$x[i], df_trinary$y[i], 
+                                   df_trinary$x[j], df_trinary$y[j])
+    
+    if (distance < min_distance) {
+      # Storing the value of the minimum distance so far.
+      min_distance <- distance
+      # Storing points 1 and 2 with the minimum distance so far.
+      point1 <- df_trinary[i, ]
+      point2 <- df_trinary[j, ]
+    }
+  }
+}
+
+# Print the points with the minimum distance,
+# as well as the distance.
+
+cat("The nearest points are:\n")
+cat("X1:",point1$x, "Y1:", point1$y, "and \n")
+cat("X2:",point2$x, "Y2:", point2$y, "\n")
+cat("The Euclidean distance between them is:", min_distance, "\n")
+```
+
+
+Fit a k nearest neighbors’ model for each dataset for k=3, k=5, k=10, k=15, k=20, and k=25. Compute the accuracy of the resulting models for each value of k. Plot the results in a graph where the x-axis is the different values of k and the y-axis is the accuracy of the model.\
+
+## Binary dataset
+```{r}
+# Split the data into features (x,y) and target (label)
+features <- df_binary[, c("x", "y")]
+target <- df_binary$label
+
+# Splitting data into training (80%) and testing (20%) sets
+
+# setting the seed to a fixed value
+set.seed(100)
+train_index <- createDataPartition(target, p = 0.8, list = FALSE)
+features_train <- features[train_index, ]
+features_test <- features[-train_index, ]
+target_train <- target[train_index]
+target_test <- target[-train_index]
+
+# List values of k to test
+k_values <- c(3, 5, 10, 15, 20, 25)
+
+# Vector to store accuracy results
+accuracy_results <- numeric(length(k_values))
+
+# Looping over values of k
+for (i in seq_along(k_values)) {
+  k <- k_values[i]
+  
+  # Fitting the KNN model
+  knn_pred <- knn(train = features_train, test = features_test,
+                  cl = target_train, k = k)
+  
+  # Calculating accuracy
+  accuracy <- sum(knn_pred == target_test) / length(target_test)
+  accuracy_results[i] <- accuracy
+}
+
+# Create a data frame for plotting
+df_binary_results <- data.frame(k = k_values, accuracy = accuracy_results)
+```
+
+Table of k values and their respective accuracy.\
+```{r}
+knitr::kable(df_binary_results, caption = "Accuracy per value of k")
+```
+
+\
+```{r}
+# Plot the results
+ggplot(df_binary_results, aes(x = k, y = accuracy)) +
+  geom_line(color = "blue") +  # Line plot
+  geom_point(size = 3, color = "red") +  # Points for each k value
+  labs(title = "KNN Model Accuracy for Different Values of k",
+       x = "Number of Neighbors (k)",
+       y = "Accuracy") +
+  theme_minimal() + 
+  theme(
+    plot.title = element_text(size = 15, hjust = 0.5)
+  )
+```
+
+## Trinary dataset
+```{r}
+# Split the data into features (x,y) and target (label)
+features <- df_trinary[, c("x", "y")]
+target <- df_trinary$label
+
+# setting the seed to a fixed value
+set.seed(100)
+
+# Splitting data into training (80%) and testing (20%) sets
+train_index <- createDataPartition(target, p = 0.8, list = FALSE)
+features_train <- features[train_index, ]
+features_test <- features[-train_index, ]
+target_train <- target[train_index]
+target_test <- target[-train_index]
+
+# List values of k to test
+k_values <- c(3, 5, 10, 15, 20, 25)
+
+# Vector to store accuracy results
+accuracy_results <- numeric(length(k_values))
+
+# Looping over values of k
+for (i in seq_along(k_values)) {
+  k <- k_values[i]
+  
+  # Fitting the KNN model
+  knn_pred <- knn(train = features_train, test = features_test,
+                  cl = target_train, k = k)
+  
+  # Calculating accuracy
+  accuracy <- sum(knn_pred == target_test) / length(target_test)
+  accuracy_results[i] <- accuracy
+}
+
+# Create a data frame for plotting
+df_trinary_results <- data.frame(k = k_values, accuracy = accuracy_results)
+```
+
+Table of k values and their respective accuracy.\
+```{r}
+knitr::kable(df_trinary_results, caption = "Accuracy per value of k")
+```
+
+\
+```{r}
+# Plot the results
+ggplot(df_trinary_results, aes(x = k, y = accuracy)) +
+  geom_line(color = "blue") +  # Line plot
+  geom_point(size = 3, color = "red") +  # Points for each k value
+  labs(title = "KNN Model Accuracy for Different Values of k",
+       x = "Number of Neighbors (k)",
+       y = "Accuracy") +
+  theme_minimal() + 
+  theme(
+    plot.title = element_text(size = 15, hjust = 0.5)
+  )
+```
+
+Looking back at the plots of the data, do you think a linear classifier would work well on these datasets?
+
+> No, a `linear classifier` would not work well for these datasets because the different classifications are all over the place. It is not possible to separate the classes by a straight line.
+
+How does the accuracy of your logistic regression classifier from last week compare?  Why is the accuracy different between these two methods?
+
+> During the previous assignment (exercise 10.2) we use a logistic regression model, and the accuracy was only `58.34%`. This assignment (exercise 11.2) uses the K Nearest Neighbor (KNN) model for the same dataset, and even the lowest accuracy is `96.98%`.
+
+> There are different reasons why accuracy is different in both models. One reason is because the `logistic regression` model assumes a linear relationship between the independent variables and the dependent variable. This model works better when the relationship between variables is approximately linear. On the other hand, the `KNN` model makes predictions based on the proximity of data points, and it does not assume any specific relationship between the features and the target variable.
+
+
+# Clustering
+
+---
+
+In this problem, you will use the k-means clustering algorithm to look for patterns in an unlabeled dataset. The dataset for this problem is found at `clustering-data.csv`.
+
+\
+Loading the required dataset.\
+```{r}
+df_clustering <- read.csv("clustering-data.csv")
+```
+
+Plot the dataset using a scatter plot.
+
+```{r}
+ggplot(df_clustering, aes(x = x, y = y)) +
+  geom_point(size = 2, alpha = 0.7, color = "ivory4") +
+  labs(title = "Scatter Plot of Binary Classifier Data",
+       x = "X",
+       y = "Y"
+       ) +
+  theme_minimal() + 
+  theme(
+    plot.title = element_text(size = 15, hjust = 0.5)
+  )
+```
+
+
+Fit the dataset using the k-means algorithm from k=2 to k=12. Create a scatter plot of the resultant clusters for each value of k.\
+```{r}
+k_values <- 2:12 
+
+# Looping through each k value
+for (k in k_values) {
+  
+  set.seed(100) 
+  kmeans_result <- kmeans(df_clustering, centers = k, nstart = 25)
+  
+  # Adding cluster assignments to the dataset
+  df_clustering$cluster <- as.factor(kmeans_result$cluster)
+  
+  # Scatter plot
+  scatter_plot <- ggplot(df_clustering, aes(x = x, y = y, color = cluster)) +
+    geom_point(alpha = 0.6, size = 2) +
+    labs(title = paste("K-Means Clusters with k = ",k),
+         x = "X",
+         y = "Y",
+         color = "Cluster") +
+    theme_minimal()
+  
+  print(scatter_plot)
+}
+```
+
+As k-means is an unsupervised algorithm, you cannot compute the accuracy as there are no correct values to compare the output to. Instead, you will use the average distance from the center of each cluster as a measure of how well the model fits the data. To calculate this metric, simply compute the distance of each data point to the center of the cluster it is assigned to and take the average value of all of those distances.
+
+Calculate this average distance from the center of each cluster for each value of k and plot it as a line chart where k is the x-axis and the average distance is the y-axis.
+
+```{r}
+# Vector to store the average distances for each k
+average_distances <- numeric(length(k_values))
+
+# Looping through each k value
+for (i in seq_along(k_values)) {
+  k <- k_values[i]
+  
+  set.seed(100)
+  kmeans_result <- kmeans(df_clustering, centers = k, nstart = 25)
+  
+  # Adding cluster assignments to the dataset
+  df_clustering$cluster <- kmeans_result$cluster
+  
+  # Calculating the distance of each point to its cluster center
+  distances <- numeric(nrow(df_clustering))
+  for (j in 1:nrow(df_clustering)) {
+    cluster_center <- kmeans_result$centers[df_clustering$cluster[j], ]
+    point <- df_clustering[j, c("x", "y")]
+    distances[j] <- sqrt(sum((point - cluster_center)^2))  # Euclidean distance
+  }
+  
+  # Calculate the average distance for this k
+  average_distances[i] <- mean(distances)
+}
+```
+
+Average distance for each value of k.
+```{r}
+results <- data.frame(k = k_values, average_distance = average_distances)
+print(results)
+```
+
+## Plot
+```{r}
+ggplot(results, aes(x = k, y = average_distance)) +
+  geom_line() +
+  geom_point() +
+  labs(title = "Average Distance to Cluster Centers vs. k",
+       x = "Number of Clusters (k)",
+       y = "Average Distance") +
+  theme_minimal()
+```
+
+One way of determining the “right” number of clusters is to look at the graph of k versus average distance and finding the “elbow point”. Looking at the graph you generated in the previous example, what is the elbow point for this dataset?
+
+> Looking at this graph, the `elbow point` is k = 5.

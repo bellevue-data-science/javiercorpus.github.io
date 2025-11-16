@@ -1,6 +1,5 @@
 ---
-title: "Week 10, Exercise 11.3"
-subtitle: "DSC520-T303: Statistics for Data Science (Dr. Chase Denton)"
+title: "Analysis of Job Postings and H-1B Visas approvals in United States"
 author: "Javier Corpus"
 date: "March 1, 2025"
 output:

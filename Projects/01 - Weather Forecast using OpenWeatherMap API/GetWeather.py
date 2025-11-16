@@ -1,8 +1,5 @@
-# GetWeather_corpus_week12.py
+# GetWeather.py
 # Purpose: Get the weather of a given city/zip code
-# DSC 510 - T304
-# Week 12
-# Programming Assignment 12.1
 # Author: Javier Corpus
 # Changelog:
 # 11/03/2024 - Initial version
@@ -11,14 +8,21 @@ import json
 import requests
 import math
 import re
-from requests.exceptions import (HTTPError, ConnectionError,
-                                 Timeout, RequestException)
+import os
+from requests.exceptions import (
+    HTTPError,
+    ConnectionError,
+    Timeout,
+    RequestException
+)
+
+from dotenv import load_dotenv
+
+load_dotenv()
+api_key = os.getenv("OPENMAP_API_KEY")                                 
 
 # Constants:
 
-# This is a demo API key (it's not valid). Replace with your own key
-# from OpenWeatherMap.org
-API_KEY = 'b6956735619ff626354ffc4813823931'
 GEOCODING_CITY_URL = 'https://api.openweathermap.org/geo/1.0/direct'
 GEOCODING_ZIP_URL = 'https://api.openweathermap.org/geo/1.0/zip'
 CURRENT_WEATHER_URL = 'https://api.openweathermap.org/data/2.5/weather'

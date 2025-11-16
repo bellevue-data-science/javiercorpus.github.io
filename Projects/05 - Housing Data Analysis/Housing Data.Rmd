@@ -1,0 +1,257 @@
+---
+title: "Housing Data"
+author: "Javier Corpus"
+date: "`r Sys.Date()`"
+output:
+  word_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+# Exercise 8.2
+
+```{r}
+# Importing the required libraries
+
+library(ggplot2) # To create plots
+library(readxl) # To read the Excel file
+library(Metrics) # To calculate RMSE
+library(dplyr, warn.conflicts = FALSE) # To transform the dataframe
+
+# Load the dataset
+df <- read_excel("week-6-housing.xlsx")
+```
+
+
+Filling blank city names based on zip code.
+```{r}
+# Fill city name (if blank) based on zip code:
+df <- df %>%
+  mutate(ctyname = ifelse(ctyname == "" & zip5 == "98052", "REDMOND",
+                          ifelse(ctyname == "" & zip5 == "98053", "REDMOND",
+                                 ifelse(ctyname == "" & zip5 == "98059", "RENTON",
+                                        ifelse(ctyname == "" & zip5 == "98074", "SAMMAMISH", ctyname)))))
+
+```
+
+#### 1.	Explain any transformations or modifications you made to the dataset.
+
+**Filled out missing city names**
+Using the `mutate` and `ifelse` functions, the blank city names were filled based on the zip code.
+
+**Added to new columns**
+For the second model, two new predictors were derived: 
+
+ - price_sq_ft_lot - Price of the lot per square feet. This was obtained dividing `Sale Price` by `sq_ft_lot`.
+ - price_sq_total_living - Price of the living space per square feet. This was obtained dividing `Sale Price` by `square_feet_total_living`.
+
+#### 2.	Create a linear regression model where “sq_ft_lot” predicts Sale Price.
+```{r}
+model01 <- lm(`Sale Price` ~ sq_ft_lot, data = df)
+```
+
+#### 3.	Get a summary of your first model and explain your results (i.e., R2, adj. R2, etc.)
+```{r}
+summary(model01)
+```
+
+**Interpretation of summary results for model 1**
+For this model, the value of `R-squared` is 0.01435. Because there is only one predictor, this value represents the square of the simple correlation between the size of the lot and the price. This means that the variation in lot size can account only for 1.43% of the variation in sales price. There must be other variables that influence 98.57% of the variations in sale price.
+
+`Adjusted R-squared`:  0.01428.
+Since this model only has one predictor, the value of the Adjusted R-squared (0.01428 in this example) also means that only about 1.43% of the variations in sale prize can be explained by the variation in the size of the lot.
+
+The `F-statistic` of 187.3 is the ratio of variance explained by the model to the variance not explained by the model.
+
+The `Degrees of Freedom` (DF, 1 and 12863) indicate the number of predictors (1) and the residual degrees of freedom. This is the total of observations minus the number of predictors minus 1. In other words: `12865 - 1 - 1 = 12863`
+
+Finally, the p-value of < 2.2e-16 is extremely small. This means that the probability of observing an F-statistic of 187.3 under the null hypothesis is extremely low.
+
+#### 4.	Get the residuals of your model (you can use ‘resid’ or ‘residuals’ functions) and plot them. What the does the plot tell you about your predictions?
+
+```{r}
+residuals01 <- residuals(model01)
+fitted_values01 <- fitted(model01)
+
+ggplot(df, aes(x = fitted_values01, y = residuals01)) +
+  geom_point(color = "blue", alpha = 0.3) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "red", linewidth = 0.5) +
+  labs(title = "Residuals vs Fitted Values - Model 1",
+       x = "Fitted Values",
+       y = "Residuals") +
+  theme_minimal() +
+  theme(
+          plot.title = element_text(size = 15, hjust = 0.5),
+       )
+```
+
+The scatter plot shows a cluster of points. This indicates that the model is missing key variables to successfully explain the `Sales Price` variable. There are also a few outliers.
+
+#### 5.	Use a qq plot to observe your residuals. Do your residuals meet the normality assumption?
+
+```{r}
+ggplot(df, aes(sample = residuals01)) +
+  geom_qq(color = "blue", alpha = 0.3) +
+  geom_qq_line(color = "red") +
+  labs(title = "Q-Q Plot of Residuals - Model 1",
+       x = "Theoretical Quantiles",
+       y = "Sample Quantiles") +
+  theme_minimal() +
+  theme(
+          plot.title = element_text(size = 15, hjust = 0.5),
+       )
+```
+
+The Q-Q plot shows that the residuals of the first are not normally distributed, since the data points deviate from the diagonal line.
+
+#### 6.	Now, create a linear regression model that uses multiple predictor variables to predict Sale Price (feel free to derive new predictors from existing ones). Explain why you think each of these variables may add explanatory value to the model.
+
+**Variables that may add value to the model**
+ - **sq_ft_lot**: The biggest lot size, the more expensive a property could be.
+ - **building_grade**: A property could be more expensive if it has a better building grade.
+ - **square_feet_total_living**: The size of the actual construction affects the price.
+ - **bedrooms**: Typically, a property with more bedrooms is more expensive.
+ - **bath_full_count**: As with bedrooms, the more full bathrooms, the more expensive a property could be.
+ - **bath_half_count**: The number of half-bathrooms also affects the price of properties.
+ - **year_built**: In a typical property, the newest it is, the more expensive it could be.
+ - **year_renovated**: As with the previous variable, a property recently renovated can have a higher price.
+ - **price_sq_ft_lot**: The price per square foot of the property has a direct impact on the price.
+ - **price_sq_total_living**: The price per square foot of the constructed space in the property has a direct impact on the price.
+
+```{r}
+df$price_sq_ft_lot = df$`Sale Price` / df$sq_ft_lot
+df$price_sq_total_living = df$`Sale Price` / df$square_feet_total_living
+
+model02 <- lm(`Sale Price` ~ sq_ft_lot + building_grade + square_feet_total_living + 
+                bedrooms + bath_full_count + bath_half_count + 
+                year_built + year_renovated + price_sq_ft_lot + price_sq_total_living, data = df)
+```
+
+
+#### 7.	Get a summary of your next model and explain your results.
+```{r}
+summary(model02)
+```
+
+**Interpretation of summary results for model 2**
+
+For this model, the value of `R-squared` is 0.8311. This indicates that approximately 83.11% of the variance in Sale Price can be explained by the 10 predictors used in the model
+
+`Adjusted R-squared`: 0.831. Since this model has a different numbers of predictors than the first one (10 vs 1), the adjusted R-squared value makes a more reliable metric when comparing both models. This second model is better at explaining the variability of Sale Price (83.10 % vs 1.43%)
+
+The `F-statistic` of 6326 is the ratio of variance explained by the model to the variance # not explained by the model.
+
+The `Degrees of Freedom` (DF, 10 and 12854) indicate the number of predictors (10) and the residual degrees of freedom. This is the total of observations minus the number of predictors minus 1. In other words: `12865 - 10 - 1 = 12854`
+
+Finally, the `p-value` of < 2.2e-16 is extremely small. This means that the probability of observing an F-statistic of 6326 under the null hypothesis is extremely low.
+
+#### 8.	Get the residuals of your second model (you can use ‘resid’ or ‘residuals’ functions) and plot them. What the does the plot tell you about your predictions?
+
+```{r}
+residuals02 <- residuals(model02)
+fitted_values02 <- fitted(model02)
+
+ggplot(df, aes(x = fitted_values02, y = residuals02)) +
+  geom_point(color = "blue", alpha = 0.3) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "red", linewidth = 0.5) +
+  labs(title = "Residuals vs Fitted Values - Model 2",
+       x = "Fitted Values",
+       y = "Residuals") +
+  theme_minimal() +
+  theme(
+          plot.title = element_text(size = 15, hjust = 0.5),
+       )
+```
+The scatter plot shows that all the data points are slightly better aligned, when comparing them to the first model. However there are still cluster of points and outliers. The second model is still  missing key variables to successfully explain the `Sales Price` variable.
+
+#### 9.	Use a qq plot to observe your residuals. Do your residuals meet the normality assumption?
+
+```{r}
+ggplot(df, aes(sample = residuals02)) +
+  geom_qq(color = "blue", alpha = 0.3) +
+  geom_qq_line(color = "red") +
+  labs(title = "Q-Q Plot of Residuals - Model 2",
+       x = "Theoretical Quantiles",
+       y = "Sample Quantiles") +
+  theme_minimal() +
+  theme(
+          plot.title = element_text(size = 15, hjust = 0.5),
+       )
+```
+The Q-Q plot shows that the residuals of the second model are still not normally distributed, since the data points deviate from the diagonal line.
+
+#### 10.	Compare the results (i.e., R2, adj R2, etc) between your first and second model. Does your new model show an improvement over the first? To confirm a ‘significant’ improvement between the second and first model, use ANOVA to compare them. What are the results?
+
+```{r}
+anova(model01, model02)
+```
+
+
+#### 11.	After observing both models (specifically, residual normality), provide your thoughts concerning whether the model is biased or not.
+
+```{r}
+# Histogram for Model 1
+residuals_model1 <- residuals(model01)
+
+ggplot(df, aes(x = residuals_model1)) +
+  geom_histogram(aes(y = after_stat(density)), bins = 50, fill = "blue", color = "black") +
+  stat_function(fun = dnorm, args = list(mean = mean(residuals_model1), sd = sd(residuals_model1)), 
+                color = "red", linewidth = 1) +
+  labs(title = "Histogram of residuals - Model 1",
+       x = "Residual",
+       y = "Density") +
+  theme_minimal() +
+    theme(
+          plot.title = element_text(size = 15, hjust = 0.5),
+       )
+```
+
+```{r}
+# Histogram for Model 2
+residuals_model2 <- residuals(model02)
+
+ggplot(df, aes(x = residuals_model2)) +
+  geom_histogram(aes(y = after_stat(density)), bins = 50, fill = "blue", color = "black") +
+  stat_function(fun = dnorm, args = list(mean = mean(residuals_model2), sd = sd(residuals_model2)), 
+                color = "red", linewidth = 1) +
+  labs(title = "Histogram of residuals - Model 2",
+       x = "Residual",
+       y = "Density") +
+  theme_minimal() +
+    theme(
+          plot.title = element_text(size = 15, hjust = 0.5),
+       )
+```
+Histograms for residuals of both models are not normally distributed. This is an indication of a biased model.
+
+#### 12.	Another important aspect of regression tasks is determining the accuracy of your predictions. For this section, we will look at root mean square error (RMSE), a common accuracy metric for regression models
+
+#### 12.1.	Install the ‘Metrics’ package in R Studio
+#### 12.2.	Using the first model, we will make predictions on the dataset using the predict function.
+   
+```{r}
+preds01 <- predict(model01)
+```
+
+#### 12.3.	What is the RMSE for the first model?
+```{r}
+rmse(df$`Sale Price`, preds01)
+```
+
+#### 12.4.	Perform the same task for the second model. Provide the RMSE for the second model.
+
+```{r}
+preds02 <- predict(model02)
+rmse(df$`Sale Price`, preds02)
+```
+
+#### 12.5.	Did the second model’s RMSE improve upon the first model? By how much?
+
+Yes, the second model (RMSE: 166,171.70) is significantly better than the first model (RMSE: 401,452.50).
+
+The difference is 235,280.80.
+  

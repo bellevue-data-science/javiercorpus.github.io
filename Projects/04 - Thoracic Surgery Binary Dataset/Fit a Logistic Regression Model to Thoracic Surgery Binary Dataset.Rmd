@@ -1,0 +1,124 @@
+---
+title: "Thoracic Surgery Binary Dataset"
+author: "Javier Corpus"
+date: "`r Sys.Date()`"
+output:
+  word_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+## Fit a Logistic Regression Model to Thoracic Surgery Binary Dataset
+
+For this problem, you will be working with the thoracic surgery data set from the University of California Irvine machine learning repository. This dataset contains information on life expectancy in lung cancer patients after surgery. The underlying thoracic surgery data is in ARFF format. This is a text-based format with information on each of the attributes. You can load this data using a package such as foreign or by cutting and pasting the data section into a CSV file.
+
+### Assignment Instructions:
+
+#### 1) Fit a binary logistic regression model to the data set that predicts whether or not the patient survived for one year (the `Risk1Y` variable) after the surgery. Use the `glm()` function to perform the logistic regression. See Generalized Linear Models for an example. Include a summary using the `summary()` function in your results.
+
+
+```{r}
+# Library required to read a file in ARFF format
+library(foreign)
+
+# Loading the data into a dataframe
+df_ts <- read.arff("ThoraricSurgery.arff")
+
+# Creating the model to predict Risk1Yr
+model_ts <- glm(Risk1Yr ~ ., data = df_ts, family = binomial)
+
+# Displaying a summary of the model
+summary(model_ts)
+```
+
+
+#### 2) According to the summary, which variables had the greatest effect on the survival rate?
+
+```{r}
+# Getting the odds ratios from the coefficients
+odds_ratios <- exp(coef(model_ts))
+
+# Creating a dataframe with the results, getting the name of the variable,
+# coefficients, odd rations and the p-value
+results <- data.frame(
+  Variable = names(coef(model_ts)),
+  Coefficient = coef(model_ts),
+  Odds_Ratio = odds_ratios,
+  P_Value = summary(model_ts)$coefficients[, 4]
+)
+
+# Sorting the `results` dataframe by the absolute value of
+# coefficients, from greater to smaller.
+results <- results[order(-abs(results$Coefficient)), ]
+
+# Removing the "(Intercept)" row.
+results <- subset(results, Variable != "(Intercept)")
+
+print(results)
+```
+
+The summary shows that variables PRE14OC14, PRE9T, PRE30T and PRE17T are all statistically significant. But the variables with the greatest effect on the survival date, according to the absolute value of their coefficients, are:
+
+|**Variable**|**Coefficient**|
+|---|---|
+|DGNDGN8|18.032862288|
+|DGNDGN5|16.381321125|
+|DGNDGN2|14.736275610|
+|PRE19T|-14.655378361|
+|DGNDGN4|14.608328798|
+|DGNDGN3|14.180551971|
+|PRE32T|-13.983294646|
+
+#### 3) To compute the accuracy of your model, use the dataset to predict the outcome variable. The percent of correct predictions is the accuracy of your model. What is the accuracy of your model?
+
+```{r}
+# Making predictions on the training data (the model)
+predicted_probabilities <- predict(model_ts, type = "response")
+
+# Converting probabilities to binary outcomes (using a threshold of 0.5)
+predicted_classes <- ifelse(predicted_probabilities > 0.5, 1, 0)
+
+# Creating a confusion matrix
+confusion_matrix <- table(Predicted = predicted_classes, Actual = df_ts$Risk1Yr)
+
+# Calculating accuracy
+accuracy <- sum(diag(confusion_matrix)) / sum(confusion_matrix)
+print(paste("Accuracy:", round((accuracy * 100), 2),"%"))
+```
+
+
+## Fit a Logistic Regression Model
+
+#### 1) Fit a logistic regression model to the binary-classifier-data.csv dataset
+
+```{r}
+df_bcd <- read.csv("binary-classifier-data.csv")
+
+model_bcd <- glm(label ~ ., data = df_bcd, family = binomial)
+summary(model_bcd)
+```
+
+#### 2) The dataset (found in binary-classifier-data.csv) contains three variables; label, x, and y. The label variable is either 0 or 1 and is the output we want to predict using the x and y variables.
+
+#### a) What is the accuracy of the logistic regression classifier?
+
+```{r}
+# Making predictions on the training data (the model)
+predicted_probabilities <- predict(model_bcd, type = "response")
+
+# Converting probabilities to binary outcomes (using a threshold of 0.5)
+predicted_classes <- ifelse(predicted_probabilities > 0.5, 1, 0)
+
+# Creating a confusion matrix
+confusion_matrix <- table(Predicted = predicted_classes, Actual = df_bcd$label)
+
+# Calculating accuracy
+accuracy <- sum(diag(confusion_matrix)) / sum(confusion_matrix)
+print(paste("Accuracy:", round((accuracy * 100), 2),"%"))
+```
+
+#### b) Keep this assignment handy, as you will be comparing your results from this week to next week.

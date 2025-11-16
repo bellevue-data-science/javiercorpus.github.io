@@ -1,0 +1,3 @@
+## Individual age of death and related factors
+
+This project uses a dataset in JSON format. This dataset has records about lifestyle choices and age of death of 10,000 individuals. Using pre-defined functions, we explore the descriptive characteristics of different features, plot histograms, and get random samples of the data. We calculate the covariance, Pearson’s correlation, and Spearman’s correlation. We split the data in different ways to perform Exploratory Data Analysis.
